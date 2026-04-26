@@ -1,20 +1,591 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MoodSync</title></head>
-<body style="background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px">
-<div style="font-size:48px">🌊</div>
-<h1>MoodSync</h1>
-<p style="color:#888;margin-bottom:30px">API 키 입력</p>
-<input id="k" type="password" placeholder="sk-ant-api03-..." style="width:100%;max-width:360px;padding:14px;border-radius:12px;border:1px solid #333;background:#111;color:#fff;font-size:14px;margin-bottom:14px">
-<button onclick="go()" style="width:100%;max-width:360px;padding:16px;border-radius:12px;border:none;background:#7c3aed;color:#fff;font-size:15px;font-weight:700;cursor:pointer">시작하기</button>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<title>MoodSync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  :root {
+    --accent: #a78bfa;
+    --bg: #0a0a0f;
+    --surface: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.09);
+    --text: #e2e8f0;
+    --muted: rgba(255,255,255,0.4);
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* PARTICLES */
+  #particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.15;
+    animation: floatP linear infinite;
+  }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* API KEY SCREEN */
+  #screen-api {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 28px;
+  }
+  #screen-api.active { display: flex; }
+  .api-logo { font-size: 52px; margin-bottom: 12px; animation: pulse 3s ease infinite; }
+  .api-title { font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.5px; }
+  .api-sub { color: var(--muted); font-size: 13px; margin-bottom: 40px; text-align: center; line-height: 1.6; }
+  .api-label { align-self: flex-start; font-size: 12px; color: var(--muted); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .api-input {
+    width: 100%;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text);
+    padding: 16px 18px;
+    font-size: 14px;
+    font-family: monospace;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border 0.3s;
+  }
+  .api-input:focus { border-color: rgba(167,139,250,0.5); }
+  .api-hint {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 28px;
+    line-height: 1.7;
+  }
+  .api-hint a { color: var(--accent); text-decoration: none; }
+
+  /* MAIN SCREEN */
+  #screen-main { padding: 48px 20px 40px; max-width: 480px; margin: 0 auto; }
+
+  /* RESULT SCREEN */
+  #screen-result { padding: 32px 20px 60px; max-width: 480px; margin: 0 auto; }
+
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 36px; animation: fadeUp 0.6s ease; }
+  .header-icon { font-size: 44px; margin-bottom: 8px; display: block; }
+  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* MOOD GRID */
+  .mood-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .mood-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #cbd5e0;
+    transition: all 0.25s ease;
+    font-family: inherit;
+  }
+  .mood-btn:active { transform: scale(0.95); }
+  .mood-btn.selected {
+    background: rgba(167,139,250,0.15);
+    border-color: rgba(167,139,250,0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(167,139,250,0.15);
+  }
+  .mood-emoji { font-size: 26px; line-height: 1; }
+  .mood-label { font-size: 10px; }
+
+  /* TEXTAREA */
+  .note-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 14px;
+    resize: none;
+    height: 76px;
+    outline: none;
+    font-family: inherit;
+    transition: border 0.3s;
+  }
+  .note-input:focus { border-color: rgba(167,139,250,0.4); }
+
+  /* BUTTONS */
+  .btn-primary {
+    width: 100%;
+    padding: 17px;
+    border-radius: 16px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    color: white;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:disabled {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.25);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn-primary:not(:disabled):active { transform: scale(0.98); }
+  .btn-ghost {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 4px;
+    transition: all 0.25s;
+  }
+  .btn-ghost:active { background: rgba(255,255,255,0.05); }
+
+  /* RESULT CARDS */
+  .diagnosis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 22px;
+    text-align: center;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease;
+  }
+  .diagnosis-emoji { font-size: 48px; margin-bottom: 12px; display: block; }
+  .diagnosis-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .diagnosis-msg { font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.75); }
+
+  .affirmation-card {
+    border-radius: 20px;
+    padding: 20px 22px;
+    text-align: center;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease 0.1s both;
+  }
+  .affirmation-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .affirmation-text { font-size: 17px; font-weight: 700; line-height: 1.5; }
+
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px 22px;
+    margin-bottom: 12px;
+  }
+  .section-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .section-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; font-size: 13px; gap: 12px; }
+  .section-row:last-child { margin-bottom: 0; }
+  .row-key { color: var(--muted); flex-shrink: 0; }
+  .row-val { text-align: right; }
+
+  .light-orb {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    animation: pulse 3s ease infinite;
+  }
+
+  .activity-item {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .activity-item:last-child { margin-bottom: 0; }
+  .activity-icon { font-size: 18px; flex-shrink: 0; }
+  .activity-when { font-size: 10px; color: var(--muted); margin-bottom: 3px; letter-spacing: 0.5px; }
+  .activity-what { font-size: 13px; }
+
+  .palette-wrap { display: flex; gap: 12px; align-items: center; }
+  .swatch { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); }
+  .swatch-code { font-size: 9px; color: var(--muted); text-align: center; margin-top: 4px; font-family: monospace; }
+
+  /* LOADER */
+  .loader {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+
+  /* BG GLOW */
+  #bg-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    transition: background 2s ease;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes floatP {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.15; }
+    90% { opacity: 0.1; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-glow"></div>
+<div id="particles"></div>
+
+<!-- API KEY SCREEN -->
+<div id="screen-api" class="screen active">
+  <div class="api-logo">🌊</div>
+  <div class="api-title">MoodSync</div>
+  <div class="api-sub">시작하려면 Anthropic API 키를<br>입력해주세요. 기기에만 저장됩니다.</div>
+  <div class="api-label">API Key</div>
+  <input class="api-input" id="api-key-input" type="password" placeholder="sk-ant-api03-...">
+  <div class="api-hint">
+    키가 없다면 →
+    <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>
+    에서 무료로 발급<br>
+    (입력한 키는 이 기기에만 저장됩니다)
+  </div>
+  <button class="btn-primary" onclick="saveApiKey()">시작하기</button>
+</div>
+
+<!-- MAIN SCREEN -->
+<div id="screen-main" class="screen">
+  <div class="header">
+    <span class="header-icon">🌊</span>
+    <h1>MoodSync</h1>
+    <p>감정을 환경으로 번역하는 AI</p>
+  </div>
+
+  <div class="card" style="animation-delay:0s">
+    <div class="card-label">지금 어떤 감정인가요?</div>
+    <div class="mood-grid" id="mood-grid"></div>
+  </div>
+
+  <div class="card" style="animation-delay:0.1s">
+    <div class="card-label">더 하고 싶은 말 (선택)</div>
+    <textarea class="note-input" id="note-input" placeholder="오늘 있었던 일, 지금 상황..."></textarea>
+  </div>
+
+  <button class="btn-primary" id="analyze-btn" disabled onclick="analyze()">
+    ✨ 나의 환경 설계하기
+  </button>
+
+  <button class="btn-ghost" onclick="changeApiKey()" style="margin-top:12px; font-size:12px;">
+    🔑 API 키 변경
+  </button>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screen-result" class="screen">
+  <div id="result-content"></div>
+  <button class="btn-ghost" onclick="goBack()">← 다시 분석하기</button>
+</div>
+
 <script>
-function go(){
-  var k=document.getElementById('k').value.trim();
-  if(!k){alert('키를 입력해주세요');return;}
-  localStorage.setItem('mk',k);
-  location.href='app.html';
+const MOODS = [
+  { emoji:"😴", label:"무기력", value:"tired" },
+  { emoji:"😰", label:"불안", value:"anxious" },
+  { emoji:"😤", label:"화남", value:"angry" },
+  { emoji:"😢", label:"슬픔", value:"sad" },
+  { emoji:"😐", label:"무감각", value:"numb" },
+  { emoji:"🙂", label:"괜찮음", value:"okay" },
+  { emoji:"😊", label:"행복", value:"happy" },
+  { emoji:"🤩", label:"신남", value:"excited" },
+  { emoji:"🥰", label:"사랑", value:"loving" },
+  { emoji:"🧘", label:"평온", value:"calm" },
+];
+
+let selectedMood = null;
+
+// Particles
+function createParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1;
+    p.style.cssText = `
+      left:${Math.random()*100}%;
+      width:${size}px; height:${size}px;
+      animation-duration:${8+Math.random()*12}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(p);
+  }
 }
-if(localStorage.getItem('mk')) location.href='app.html';
+createParticles();
+
+// Mood grid
+function buildMoodGrid() {
+  const grid = document.getElementById('mood-grid');
+  MOODS.forEach(mood => {
+    const btn = document.createElement('button');
+    btn.className = 'mood-btn';
+    btn.innerHTML = `<span class="mood-emoji">${mood.emoji}</span><span class="mood-label">${mood.label}</span>`;
+    btn.onclick = () => selectMood(mood, btn);
+    grid.appendChild(btn);
+  });
+}
+buildMoodGrid();
+
+function selectMood(mood, btn) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedMood = mood;
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+// API Key
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key.startsWith('sk-')) {
+    alert('올바른 API 키를 입력해주세요 (sk- 로 시작)');
+    return;
+  }
+  localStorage.setItem('moodsync_key', key);
+  showScreen('main');
+}
+
+function changeApiKey() {
+  showScreen('api');
+  document.getElementById('api-key-input').value = localStorage.getItem('moodsync_key') || '';
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// Check saved key
+window.addEventListener('load', () => {
+  const key = localStorage.getItem('moodsync_key');
+  if (key) showScreen('main');
+});
+
+// Analyze
+async function analyze() {
+  if (!selectedMood) return;
+  const note = document.getElementById('note-input').value;
+  const apiKey = localStorage.getItem('moodsync_key');
+  const btn = document.getElementById('analyze-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>AI 분석 중...';
+
+  const systemPrompt = `당신은 감정 기반 환경 오케스트레이터입니다. 사용자의 감정 상태를 분석하여 JSON 형식으로만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
+
+응답 형식:
+{
+  "diagnosis": "감정 진단 한 줄 (20자 이내)",
+  "message": "따뜻하고 공감 어린 메시지 (2문장)",
+  "music": {
+    "genre": "음악 장르",
+    "bpm": "템포 설명",
+    "artist_vibe": "아티스트 분위기",
+    "playlist_name": "플레이리스트 이름"
+  },
+  "lighting": {
+    "color": "#HEX색상",
+    "brightness": "밝기 설명",
+    "mode": "조명 모드"
+  },
+  "food": {
+    "suggestion": "음식 추천",
+    "reason": "이유 한 줄"
+  },
+  "activity": {
+    "now": "지금 당장 할 것",
+    "today": "오늘 해보면 좋을 것"
+  },
+  "affirmation": "오늘의 확언 (짧고 강렬하게)",
+  "color_palette": ["#색1", "#색2", "#색3"]
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: `현재 감정: ${selectedMood.label} (${selectedMood.value})\n추가 메모: ${note || '없음'}\n\n이 감정에 맞는 환경을 설계해주세요.`
+        }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.content[0].text;
+    const clean = text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    renderResult(result);
+    setGlow(result.lighting.color);
+    showScreen('result');
+
+  } catch (err) {
+    alert('오류: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ 나의 환경 설계하기';
+  }
+}
+
+function setGlow(hex) {
+  document.getElementById('bg-glow').style.background =
+    `radial-gradient(ellipse at 50% 0%, ${hex}18 0%, transparent 70%)`;
+  document.querySelectorAll('.particle').forEach(p => p.style.background = hex);
+}
+
+function renderResult(r) {
+  const c = r.lighting.color;
+  document.getElementById('result-content').innerHTML = `
+    <div class="diagnosis-card">
+      <span class="diagnosis-emoji">${selectedMood.emoji}</span>
+      <div class="diagnosis-badge" style="background:${c}28;border:1px solid ${c}55;color:${c}">${r.diagnosis}</div>
+      <div class="diagnosis-msg">${r.message}</div>
+    </div>
+
+    <div class="affirmation-card" style="background:${c}12;border:1px solid ${c}28;animation-delay:0.1s">
+      <div class="affirmation-label">오늘의 확언</div>
+      <div class="affirmation-text" style="color:${c}">"${r.affirmation}"</div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.15s both">
+      <div class="section-title">🎵 음악 환경</div>
+      <div class="section-row"><span class="row-key">플레이리스트</span><span class="row-val">${r.music.playlist_name}</span></div>
+      <div class="section-row"><span class="row-key">장르</span><span class="row-val">${r.music.genre}</span></div>
+      <div class="section-row"><span class="row-key">분위기</span><span class="row-val">${r.music.artist_vibe}</span></div>
+      <div class="section-row"><span class="row-key">템포</span><span class="row-val">${r.music.bpm}</span></div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.2s both">
+      <div class="section-title">💡 조명 환경</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="light-orb" style="background:${c};box-shadow:0 0 28px ${c}88"></div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">${r.lighting.mode}</div>
+          <div style="font-size:13px;color:var(--muted)">${r.lighting.brightness}</div>
+          <div style="font-size:11px;color:${c};font-family:monospace;margin-top:4px">${c}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.25s both">
+      <div class="section-title">🍽️ 음식 추천</div>
+      <div style="font-weight:600;margin-bottom:6px">${r.food.suggestion}</div>
+      <div style="font-size:13px;color:var(--muted)">${r.food.reason}</div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.3s both">
+      <div class="section-title">⚡ 행동 처방</div>
+      <div class="activity-item">
+        <span class="activity-icon">🔥</span>
+        <div><div class="activity-when">지금 당장</div><div class="activity-what">${r.activity.now}</div></div>
+      </div>
+      <div class="activity-item">
+        <span class="activity-icon">🌙</span>
+        <div><div class="activity-when">오늘 안에</div><div class="activity-what">${r.activity.today}</div></div>
+      </div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.35s both">
+      <div class="section-title">🎨 오늘의 컬러</div>
+      <div class="palette-wrap">
+        ${(r.color_palette||[]).map(col=>`
+          <div>
+            <div class="swatch" style="background:${col};box-shadow:0 4px 12px ${col}55"></div>
+            <div class="swatch-code">${col}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function goBack() {
+  setGlow('transparent');
+  showScreen('main');
+  document.getElementById('result-content').innerHTML = '';
+}
 </script>
-</body></html>
+</body>
+</html>
