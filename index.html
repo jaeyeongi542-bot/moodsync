@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MoodSync</title></head>
+<body style="background:#0a0a0f;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px">
+<div style="font-size:48px">🌊</div>
+<h1>MoodSync</h1>
+<p style="color:#888;margin-bottom:30px">API 키 입력</p>
+<input id="k" type="password" placeholder="sk-ant-api03-..." style="width:100%;max-width:360px;padding:14px;border-radius:12px;border:1px solid #333;background:#111;color:#fff;font-size:14px;margin-bottom:14px">
+<button onclick="go()" style="width:100%;max-width:360px;padding:16px;border-radius:12px;border:none;background:#7c3aed;color:#fff;font-size:15px;font-weight:700;cursor:pointer">시작하기</button>
+<script>
+function go(){
+  var k=document.getElementById('k').value.trim();
+  if(!k){alert('키를 입력해주세요');return;}
+  localStorage.setItem('mk',k);
+  location.href='app.html';
+}
+if(localStorage.getItem('mk')) location.href='app.html';
+</script>
+</body></html>
