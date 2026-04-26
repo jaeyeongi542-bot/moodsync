@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<title>MoodSync (Demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  :root {
+    --accent: #a78bfa;
+    --bg: #0a0a0f;
+    --surface: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.09);
+    --text: #e2e8f0;
+    --muted: rgba(255,255,255,0.4);
+  }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* PARTICLES */
+  #particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.15;
+    animation: floatP linear infinite;
+  }
+
+  /* SCREENS */
+  .screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* MAIN SCREEN */
+  #screen-main { padding: 48px 20px 40px; max-width: 480px; margin: 0 auto; }
+  #screen-main.active { display: block; }
+
+  /* RESULT SCREEN */
+  #screen-result { padding: 32px 20px 60px; max-width: 480px; margin: 0 auto; }
+  #screen-result.active { display: block; }
+
+  /* HEADER */
+  .header { text-align: center; margin-bottom: 36px; animation: fadeUp 0.6s ease; }
+  .header-icon { font-size: 44px; margin-bottom: 8px; display: block; }
+  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .header p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  /* MOOD GRID */
+  .mood-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .mood-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: #cbd5e0;
+    transition: all 0.25s ease;
+    font-family: inherit;
+  }
+  .mood-btn:active { transform: scale(0.95); }
+  .mood-btn.selected {
+    background: rgba(167,139,250,0.15);
+    border-color: rgba(167,139,250,0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(167,139,250,0.15);
+  }
+  .mood-emoji { font-size: 26px; line-height: 1; }
+  .mood-label { font-size: 10px; }
+
+  /* TEXTAREA */
+  .note-input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 14px;
+    resize: none;
+    height: 76px;
+    outline: none;
+    font-family: inherit;
+    transition: border 0.3s;
+  }
+  .note-input:focus { border-color: rgba(167,139,250,0.4); }
+
+  /* BUTTONS */
+  .btn-primary {
+    width: 100%;
+    padding: 17px;
+    border-radius: 16px;
+    border: none;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+    color: white;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+  }
+  .btn-primary:disabled {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.25);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .btn-primary:not(:disabled):active { transform: scale(0.98); }
+  .btn-ghost {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 4px;
+    transition: all 0.25s;
+  }
+  .btn-ghost:active { background: rgba(255,255,255,0.05); }
+
+  /* RESULT CARDS */
+  .diagnosis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 22px;
+    text-align: center;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease;
+  }
+  .diagnosis-emoji { font-size: 48px; margin-bottom: 12px; display: block; }
+  .diagnosis-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .diagnosis-msg { font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.75); }
+
+  .affirmation-card {
+    border-radius: 20px;
+    padding: 20px 22px;
+    text-align: center;
+    margin-bottom: 12px;
+    animation: fadeUp 0.5s ease 0.1s both;
+  }
+  .affirmation-label { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .affirmation-text { font-size: 17px; font-weight: 700; line-height: 1.5; }
+
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px 22px;
+    margin-bottom: 12px;
+  }
+  .section-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .section-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; font-size: 13px; gap: 12px; }
+  .section-row:last-child { margin-bottom: 0; }
+  .row-key { color: var(--muted); flex-shrink: 0; }
+  .row-val { text-align: right; }
+
+  .light-orb {
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    animation: pulse 3s ease infinite;
+  }
+
+  .activity-item {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .activity-item:last-child { margin-bottom: 0; }
+  .activity-icon { font-size: 18px; flex-shrink: 0; }
+  .activity-when { font-size: 10px; color: var(--muted); margin-bottom: 3px; letter-spacing: 0.5px; }
+  .activity-what { font-size: 13px; }
+
+  .palette-wrap { display: flex; gap: 12px; align-items: center; }
+  .swatch { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15); }
+  .swatch-code { font-size: 9px; color: var(--muted); text-align: center; margin-top: 4px; font-family: monospace; }
+
+  /* LOADER */
+  .loader {
+    display: inline-block; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+
+  /* BG GLOW */
+  #bg-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    transition: background 2s ease;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes floatP {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.15; }
+    90% { opacity: 0.1; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg-glow"></div>
+<div id="particles"></div>
+
+<!-- MAIN SCREEN -->
+<div id="screen-main" class="screen active">
+  <div class="header">
+    <span class="header-icon">🌊</span>
+    <h1>MoodSync</h1>
+    <p>감정을 환경으로 번역하는 AI (Demo)</p>
+  </div>
+
+  <div class="card" style="animation-delay:0s">
+    <div class="card-label">지금 어떤 감정인가요?</div>
+    <div class="mood-grid" id="mood-grid"></div>
+  </div>
+
+  <div class="card" style="animation-delay:0.1s">
+    <div class="card-label">더 하고 싶은 말 (선택)</div>
+    <textarea class="note-input" id="note-input" placeholder="오늘 있었던 일, 지금 상황..."></textarea>
+  </div>
+
+  <button class="btn-primary" id="analyze-btn" disabled onclick="analyze()">
+    ✨ 나의 환경 설계하기
+  </button>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="screen-result" class="screen">
+  <div id="result-content"></div>
+  <button class="btn-ghost" onclick="goBack()">← 다시 분석하기</button>
+</div>
+
+<script>
+const MOODS = [
+  { emoji:"😴", label:"무기력", value:"tired" },
+  { emoji:"😰", label:"불안", value:"anxious" },
+  { emoji:"😤", label:"화남", value:"angry" },
+  { emoji:"😢", label:"슬픔", value:"sad" },
+  { emoji:"😐", label:"무감각", value:"numb" },
+  { emoji:"🙂", label:"괜찮음", value:"okay" },
+  { emoji:"😊", label:"행복", value:"happy" },
+  { emoji:"🤩", label:"신남", value:"excited" },
+  { emoji:"🥰", label:"사랑", value:"loving" },
+  { emoji:"🧘", label:"평온", value:"calm" },
+];
+
+const SIMULATED_DATA = {
+  tired: {
+    diagnosis: "에너지 재충전이 필요한 상태",
+    message: "몸과 마음이 많이 지치셨군요. 오늘은 무리하지 말고 자신을 돌보는 시간을 가져보세요.",
+    music: { genre: "Lo-fi Jazz", bpm: "75 BPM", artist_vibe: "차분하고 몽환적인", playlist_name: "Deep Sleep & Rest" },
+    lighting: { color: "#FFB347", brightness: "낮은 조도 (20%)", mode: "따뜻한 촛불 모드" },
+    food: { suggestion: "따뜻한 꿀차와 견과류", reason: "긴장을 완화하고 에너지를 서서히 보충해줍니다." },
+    activity: { now: "10분간 눈 감고 명상하기", today: "평소보다 1시간 일찍 잠자리에 들기" },
+    affirmation: "나는 쉴 자격이 있으며, 휴식은 낭비가 아니다.",
+    color_palette: ["#FFB347", "#FFE4B5", "#DEB887"]
+  },
+  anxious: {
+    diagnosis: "마음의 안정이 필요한 순간",
+    message: "생각이 많아 마음이 어지러우시군요. 천천히 호흡하며 현재에 집중해 보세요.",
+    music: { genre: "Ambient Nature", bpm: "60 BPM", artist_vibe: "평화로운 숲속의", playlist_name: "Calm Your Mind" },
+    lighting: { color: "#ADD8E6", brightness: "부드러운 조도 (40%)", mode: "안정적인 블루 모드" },
+    food: { suggestion: "카모마일 티", reason: "심신을 안정시키고 불안감을 줄여줍니다." },
+    activity: { now: "4-7-8 호흡법 3회 반복", today: "걱정되는 일들을 종이에 적어보기" },
+    affirmation: "모든 것은 결국 괜찮아질 것이다.",
+    color_palette: ["#ADD8E6", "#E0FFFF", "#B0C4DE"]
+  },
+  angry: {
+    diagnosis: "뜨거운 감정을 식히는 중",
+    message: "화가 나는 마음을 억누르기보다 차분히 흘려보내세요. 시원한 공기가 도움이 될 거예요.",
+    music: { genre: "Classical Piano", bpm: "80 BPM", artist_vibe: "정교하고 차분한", playlist_name: "Cool Down" },
+    lighting: { color: "#E6E6FA", brightness: "선명한 조도 (50%)", mode: "라벤더 쿨링 모드" },
+    food: { suggestion: "시원한 탄산수나 과일", reason: "답답한 기분을 상쾌하게 전환해줍니다." },
+    activity: { now: "차가운 물로 세수하기", today: "빠른 걸음으로 15분 산책하기" },
+    affirmation: "나는 내 감정의 주인이며, 평온을 선택한다.",
+    color_palette: ["#E6E6FA", "#D8BFD8", "#B0E0E6"]
+  },
+  sad: {
+    diagnosis: "마음의 위로가 필요한 시간",
+    message: "슬픈 감정을 충분히 느껴도 괜찮습니다. 당신의 마음을 따뜻하게 안아주고 싶네요.",
+    music: { genre: "Acoustic Ballad", bpm: "65 BPM", artist_vibe: "서정적이고 따뜻한", playlist_name: "Warm Hugs" },
+    lighting: { color: "#FFFACD", brightness: "은은한 조도 (30%)", mode: "포근한 노란빛 모드" },
+    food: { suggestion: "달콤한 초콜릿 한 조각", reason: "세로토닌 분비를 도와 기분을 북돋아줍니다." },
+    activity: { now: "좋아하는 담요 덮고 있기", today: "나에게 하고 싶은 위로의 말 적기" },
+    affirmation: "비가 온 뒤에 땅이 굳듯, 나는 더 단단해질 것이다.",
+    color_palette: ["#FFFACD", "#FFEFD5", "#F5F5DC"]
+  },
+  numb: {
+    diagnosis: "작은 감각을 깨우는 단계",
+    message: "가끔은 아무것도 느껴지지 않을 때가 있죠. 작은 것부터 다시 느껴보기 시작해요.",
+    music: { genre: "Minimal Techno", bpm: "110 BPM", artist_vibe: "규칙적이고 감각적인", playlist_name: "Sensory Wakeup" },
+    lighting: { color: "#F0FFF0", brightness: "생기 있는 조도 (60%)", mode: "민트 프레시 모드" },
+    food: { suggestion: "매콤한 음식", reason: "무뎌진 미각과 감각을 자극해줍니다." },
+    activity: { now: "손끝 발끝 움직여보기", today: "새로운 향기의 향수나 로션 사용하기" },
+    affirmation: "나는 살아있으며, 매 순간 새로운 감각을 느낀다.",
+    color_palette: ["#F0FFF0", "#98FB98", "#AFEEEE"]
+  },
+  okay: {
+    diagnosis: "평온한 일상의 유지",
+    message: "무난하고 평화로운 하루군요. 이 안정감을 충분히 만끽하시길 바랍니다.",
+    music: { genre: "Indie Pop", bpm: "95 BPM", artist_vibe: "경쾌하고 편안한", playlist_name: "Daily Sunshine" },
+    lighting: { color: "#F5F5F5", brightness: "자연스러운 조도 (70%)", mode: "내추럴 화이트 모드" },
+    food: { suggestion: "신선한 샐러드", reason: "몸의 균형을 유지하고 가벼운 기분을 줍니다." },
+    activity: { now: "기지개 크게 켜기", today: "가까운 지인에게 안부 인사하기" },
+    affirmation: "평범한 오늘이 모여 특별한 내일을 만든다.",
+    color_palette: ["#F5F5F5", "#DCDCDC", "#E2E8F0"]
+  },
+  happy: {
+    diagnosis: "밝은 에너지가 넘치는 상태",
+    message: "당신의 행복한 에너지가 주변까지 밝히네요! 이 기분을 더 오래 간직하세요.",
+    music: { genre: "Funk & Soul", bpm: "120 BPM", artist_vibe: "그루비하고 신나는", playlist_name: "Pure Joy" },
+    lighting: { color: "#FFF700", brightness: "밝은 조도 (90%)", mode: "선샤인 옐로우 모드" },
+    food: { suggestion: "좋아하는 사람과 맛있는 식사", reason: "행복을 공유하면 기쁨이 배가 됩니다." },
+    activity: { now: "거울 보고 활짝 웃어보기", today: "오늘의 행복한 순간 사진으로 남기" },
+    affirmation: "나는 행복을 누릴 자격이 충분한 사람이다.",
+    color_palette: ["#FFF700", "#FFD700", "#FFA500"]
+  },
+  excited: {
+    diagnosis: "폭발적인 창의성과 열정",
+    message: "정말 신나는 일이 있으시군요! 그 열정을 멋진 곳에 쏟아부어 보세요.",
+    music: { genre: "Upbeat Electronic", bpm: "128 BPM", artist_vibe: "에너제틱하고 파워풀한", playlist_name: "High Energy" },
+    lighting: { color: "#FF00FF", brightness: "강렬한 조도 (100%)", mode: "네온 파티 모드" },
+    food: { suggestion: "시원한 에이드나 주스", reason: "넘치는 에너지를 상쾌하게 유지해줍니다." },
+    activity: { now: "좋아하는 노래 따라 부르기", today: "새로운 프로젝트나 취미 시작하기" },
+    affirmation: "나의 가능성은 무한하며, 무엇이든 해낼 수 있다.",
+    color_palette: ["#FF00FF", "#8A2BE2", "#00FFFF"]
+  },
+  loving: {
+    diagnosis: "사랑과 다정함이 가득한 마음",
+    message: "마음이 사랑으로 가득 차 있네요. 그 따뜻함을 소중한 사람들에게 나눠주세요.",
+    music: { genre: "R&B Love Songs", bpm: "85 BPM", artist_vibe: "달콤하고 부드러운", playlist_name: "Sweet Romance" },
+    lighting: { color: "#FFC0CB", brightness: "부드러운 조도 (50%)", mode: "로맨틱 핑크 모드" },
+    food: { suggestion: "딸기 케이크나 마카롱", reason: "달콤한 맛이 사랑스러운 기분을 더해줍니다." },
+    activity: { now: "소중한 사람에게 메시지 보내기", today: "나 자신에게 작은 선물하기" },
+    affirmation: "나는 사랑받고 있으며, 사랑을 줄 수 있는 사람이다.",
+    color_palette: ["#FFC0CB", "#FF69B4", "#DB7093"]
+  },
+  calm: {
+    diagnosis: "깊은 내면의 평화",
+    message: "고요하고 평온한 상태이시군요. 이 깊은 안식의 시간을 소중히 여기세요.",
+    music: { genre: "Zen Meditation", bpm: "50 BPM", artist_vibe: "정적이고 깊은", playlist_name: "Inner Peace" },
+    lighting: { color: "#F0F8FF", brightness: "매우 낮은 조도 (10%)", mode: "문라이트 모드" },
+    food: { suggestion: "따뜻한 우유나 녹차", reason: "평온함을 유지하고 깊은 휴식을 돕습니다." },
+    activity: { now: "깊은 호흡에 집중하기", today: "조용히 독서하거나 일기 쓰기" },
+    affirmation: "내 마음은 고요한 호수처럼 평화롭다.",
+    color_palette: ["#F0F8FF", "#B0E0E6", "#AFEEEE"]
+  }
+};
+
+let selectedMood = null;
+
+// Particles
+function createParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 3 + 1;
+    p.style.cssText = `
+      left:${Math.random()*100}%;
+      width:${size}px; height:${size}px;
+      animation-duration:${8+Math.random()*12}s;
+      animation-delay:${Math.random()*10}s;
+    `;
+    container.appendChild(p);
+  }
+}
+createParticles();
+
+// Mood grid
+function buildMoodGrid() {
+  const grid = document.getElementById('mood-grid');
+  MOODS.forEach(mood => {
+    const btn = document.createElement('button');
+    btn.className = 'mood-btn';
+    btn.innerHTML = `<span class="mood-emoji">${mood.emoji}</span><span class="mood-label">${mood.label}</span>`;
+    btn.onclick = () => selectMood(mood, btn);
+    grid.appendChild(btn);
+  });
+}
+buildMoodGrid();
+
+function selectMood(mood, btn) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedMood = mood;
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// Analyze (Simulated)
+async function analyze() {
+  if (!selectedMood) return;
+  const btn = document.getElementById('analyze-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>AI 분석 중...';
+
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  const result = SIMULATED_DATA[selectedMood.value];
+  
+  renderResult(result);
+  setGlow(result.lighting.color);
+  showScreen('result');
+
+  btn.disabled = false;
+  btn.innerHTML = '✨ 나의 환경 설계하기';
+}
+
+function setGlow(hex) {
+  document.getElementById('bg-glow').style.background =
+    `radial-gradient(ellipse at 50% 0%, ${hex}18 0%, transparent 70%)`;
+  document.querySelectorAll('.particle').forEach(p => p.style.background = hex);
+}
+
+function renderResult(r) {
+  const c = r.lighting.color;
+  document.getElementById('result-content').innerHTML = `
+    <div class="diagnosis-card">
+      <span class="diagnosis-emoji">${selectedMood.emoji}</span>
+      <div class="diagnosis-badge" style="background:${c}28;border:1px solid ${c}55;color:${c}">${r.diagnosis}</div>
+      <div class="diagnosis-msg">${r.message}</div>
+    </div>
+
+    <div class="affirmation-card" style="background:${c}12;border:1px solid ${c}28;animation-delay:0.1s">
+      <div class="affirmation-label">오늘의 확언</div>
+      <div class="affirmation-text" style="color:${c}">"${r.affirmation}"</div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.15s both">
+      <div class="section-title">🎵 음악 환경</div>
+      <div class="section-row"><span class="row-key">플레이리스트</span><span class="row-val">${r.music.playlist_name}</span></div>
+      <div class="section-row"><span class="row-key">장르</span><span class="row-val">${r.music.genre}</span></div>
+      <div class="section-row"><span class="row-key">분위기</span><span class="row-val">${r.music.artist_vibe}</span></div>
+      <div class="section-row"><span class="row-key">템포</span><span class="row-val">${r.music.bpm}</span></div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.2s both">
+      <div class="section-title">💡 조명 환경</div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="light-orb" style="background:${c};box-shadow:0 0 28px ${c}88"></div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px">${r.lighting.mode}</div>
+          <div style="font-size:13px;color:var(--muted)">${r.lighting.brightness}</div>
+          <div style="font-size:11px;color:${c};font-family:monospace;margin-top:4px">${c}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.25s both">
+      <div class="section-title">🍽️ 음식 추천</div>
+      <div style="font-weight:600;margin-bottom:6px">${r.food.suggestion}</div>
+      <div style="font-size:13px;color:var(--muted)">${r.food.reason}</div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.3s both">
+      <div class="section-title">⚡ 행동 처방</div>
+      <div class="activity-item">
+        <span class="activity-icon">🔥</span>
+        <div><div class="activity-when">지금 당장</div><div class="activity-what">${r.activity.now}</div></div>
+      </div>
+      <div class="activity-item">
+        <span class="activity-icon">🌙</span>
+        <div><div class="activity-when">오늘 안에</div><div class="activity-what">${r.activity.today}</div></div>
+      </div>
+    </div>
+
+    <div class="section-card" style="animation:fadeUp 0.5s ease 0.35s both">
+      <div class="section-title">🎨 오늘의 컬러</div>
+      <div class="palette-wrap">
+        ${(r.color_palette||[]).map(col=>`
+          <div>
+            <div class="swatch" style="background:${col};box-shadow:0 4px 12px ${col}55"></div>
+            <div class="swatch-code">${col}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function goBack() {
+  setGlow('transparent');
+  showScreen('main');
+  document.getElementById('result-content').innerHTML = '';
+}
+</script>
+</body>
+</html>
